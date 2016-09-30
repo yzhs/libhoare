@@ -19,7 +19,7 @@ use syntax::ast;
 use syntax::ast::{Item, MetaItem};
 use syntax::codemap::{self, Span, Spanned, dummy_spanned};
 use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
-use syntax::ext::quote::rt::{ExtParseUtils, ToTokens};
+use syntax::ext::quote::rt::ExtParseUtils;
 use syntax::ext::build::AstBuilder;
 use syntax::fold::{Folder, noop_fold_expr, noop_fold_mac};
 use syntax::parse::token;
@@ -343,11 +343,11 @@ fn assert(cx: &ExtCtxt,
 }
 
 fn fn_body(cx: &ExtCtxt,
-           stmts: Vec<ast::Stmt>,
+           mut stmts: Vec<ast::Stmt>,
            sp: Span) -> P<ast::Block> {
+    stmts.extend(result_expr(cx).into_iter());
     P(ast::Block {
         stmts: stmts,
-        expr: Some(result_expr(cx)),
         id: ast::DUMMY_NODE_ID,
         rules: ast::BlockCheckMode::Default,
         span: sp
@@ -355,9 +355,9 @@ fn fn_body(cx: &ExtCtxt,
 }
 
 // The return expr for our wrapper function, just returns __result.
-fn result_expr(cx: &ExtCtxt) -> P<ast::Expr> {
+fn result_expr(cx: &ExtCtxt) -> Option<ast::Stmt> {
     let result_name = result_name();
-    quote_expr!(cx, $result_name)
+    quote_stmt!(cx, $result_name)
 }
 
 fn result_name() -> ast::Ident {
@@ -366,9 +366,12 @@ fn result_name() -> ast::Ident {
     }
 }
 
-fn loop_label() -> ast::Ident {
+fn loop_label(sp: Span) -> ast::SpannedIdent {
     unsafe {
-        ast::Ident::with_empty_ctxt(token::intern(&format!("'__hoare_{}", RUN_COUNT)))
+        codemap::Spanned {
+            node: ast::Ident::with_empty_ctxt(token::intern(&format!("'__hoare_{}", RUN_COUNT))),
+            span: sp,
+        }
     }
 }
 
@@ -387,21 +390,22 @@ fn make_body(cx: &ExtCtxt,
     // Fold return expressions into breaks.
     body.stmts = fold_stmts(cx, &body.stmts);
 
+    let expr = body.stmts.pop();
+
     // Turn the optional returned expression into an assignment
     // into __result and a break.
-    body.stmts.extend(terminate_loop(cx, &body.expr, ret).into_iter());
+    body.stmts.extend(terminate_loop(cx, &expr, ret).into_iter());
     // FIXME Sometimes (e.g., after a return which was converted to a break) this
     // is not necessary, it will then produce unreachable code warnings. Would
     // be better not to generate this code then.
     body.stmts.push(cx.stmt_expr(cx.expr(codemap::DUMMY_SP,
                                          ast::ExprKind::Break(Some(spanned_loop_label())))));
-    body.expr = None;
 
-    cx.stmt_expr(cx.expr(sp, ast::ExprKind::Loop(P(body), Some(loop_label()))))
+    cx.stmt_expr(cx.expr(sp, ast::ExprKind::Loop(P(body), Some(loop_label(sp.clone())))))
 }
 
 fn terminate_loop(cx: &ExtCtxt,
-                  expr: &Option<P<ast::Expr>>,
+                  expr: &Option<ast::Stmt>,
                   ret: &ast::FunctionRetTy)
     -> Option<ast::Stmt>
 {
@@ -409,7 +413,13 @@ fn terminate_loop(cx: &ExtCtxt,
     match expr {
         &Some(ref expr) => {
             let expr = expr.clone();
-            quote_stmt!(cx, $result_name = Some($expr))
+            match &expr.node {
+                &ast::StmtKind::Expr(ref e) |
+                &ast::StmtKind::Semi(ref e) => {
+                    quote_stmt!(cx, $result_name = Some($e))
+                }
+                _ => None,
+            }
         }
         &None if is_void(ret) => quote_stmt!(cx, $result_name = Some(())),
         _ => None,
@@ -418,7 +428,6 @@ fn terminate_loop(cx: &ExtCtxt,
 
 fn is_void(ret: &ast::FunctionRetTy) -> bool {
     match ret {
-        &ast::FunctionRetTy::None(_) => true,
         &ast::FunctionRetTy::Default(_) => true,
         &ast::FunctionRetTy::Ty(ref ty) => {
             if let ast::TyKind::Tup(ref tys) = ty.node {
@@ -465,7 +474,7 @@ impl<'a, 'b> Folder for ReturnFolder<'a, 'b> {
                                  self.cx.stmt_expr(
                                     self.cx.expr(codemap::DUMMY_SP,
                                         ast::ExprKind::Break(Some(loop_label))))];
-                let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts, None));
+                let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts));
                 return expr;
             }
             ast::ExprKind::Ret(None) => {
@@ -475,7 +484,7 @@ impl<'a, 'b> Folder for ReturnFolder<'a, 'b> {
                                  self.cx.stmt_expr(
                                     self.cx.expr(codemap::DUMMY_SP,
                                         ast::ExprKind::Break(Some(loop_label))))];
-                let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts, None));
+                let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts));
                 return expr;
             }
             _ => {}
