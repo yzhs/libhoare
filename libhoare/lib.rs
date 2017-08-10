@@ -22,8 +22,8 @@ use syntax::ext::base::{ExtCtxt, MultiModifier, Annotatable};
 use syntax::ext::quote::rt::ExtParseUtils;
 use syntax::ext::build::AstBuilder;
 use syntax::fold::{Folder, noop_fold_expr, noop_fold_mac};
-use syntax::parse::token;
 use syntax::ptr::P;
+use syntax::symbol::{InternedString, Symbol};
 use syntax::util::small_vector::SmallVector;
 use rustc_plugin::Registry;
 
@@ -39,22 +39,25 @@ fn inc_run_count() {
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("precond"), MultiModifier(Box::new(precond)));
-    reg.register_syntax_extension(token::intern("postcond"), MultiModifier(Box::new(postcond)));
+    reg.register_syntax_extension(Symbol::intern("precond"), MultiModifier(Box::new(precond)));
     reg.register_syntax_extension(
-        token::intern("invariant"),
+        Symbol::intern("postcond"),
+        MultiModifier(Box::new(postcond)),
+    );
+    reg.register_syntax_extension(
+        Symbol::intern("invariant"),
         MultiModifier(Box::new(invariant)),
     );
     reg.register_syntax_extension(
-        token::intern("debug_precond"),
+        Symbol::intern("debug_precond"),
         MultiModifier(Box::new(debug_precond)),
     );
     reg.register_syntax_extension(
-        token::intern("debug_postcond"),
+        Symbol::intern("debug_postcond"),
         MultiModifier(Box::new(debug_postcond)),
     );
     reg.register_syntax_extension(
-        token::intern("debug_invariant"),
+        Symbol::intern("debug_invariant"),
         MultiModifier(Box::new(debug_invariant)),
     );
 }
@@ -283,7 +286,7 @@ where
     F: Fn(&mut ExtCtxt) -> Annotatable,
 {
     if cx.cfg().iter().any(|item| {
-        item.node == ast::MetaItemKind::Word(token::intern("debug_assertions").as_str())
+        item.node == ast::MetaItemKind::Word(Symbol::intern("debug_assertions").as_str())
     })
     {
         f(cx)
@@ -299,7 +302,7 @@ fn make_predicate(
     sp: Span,
     attr: &MetaItem,
     cond_name: &str,
-) -> Result<token::InternedString, ()> {
+) -> Result<InternedString, ()> {
     fn debug_name(cond_name: &str) -> String {
         let mut result = "debug_".to_string();
         result.push_str(cond_name);
@@ -333,7 +336,7 @@ fn make_predicate(
 fn assert(
     cx: &ExtCtxt,
     cond_type: &str,
-    fn_name: &token::InternedString,
+    fn_name: &InternedString,
     pred: P<ast::Expr>,
     pred_str: &str,
 ) -> ast::Stmt {
@@ -364,13 +367,13 @@ fn result_expr(cx: &ExtCtxt) -> Option<ast::Stmt> {
 }
 
 fn result_name() -> ast::Ident {
-    unsafe { ast::Ident::with_empty_ctxt(token::intern(&format!("__result_{}", RUN_COUNT))) }
+    unsafe { ast::Ident::with_empty_ctxt(Symbol::intern(&format!("__result_{}", RUN_COUNT))) }
 }
 
 fn loop_label(sp: Span) -> ast::SpannedIdent {
     unsafe {
         codemap::Spanned {
-            node: ast::Ident::with_empty_ctxt(token::intern(&format!("'__hoare_{}", RUN_COUNT))),
+            node: ast::Ident::with_empty_ctxt(Symbol::intern(&format!("'__hoare_{}", RUN_COUNT))),
             span: sp,
         }
     }
@@ -379,7 +382,7 @@ fn loop_label(sp: Span) -> ast::SpannedIdent {
 fn spanned_loop_label() -> Spanned<ast::Ident> {
     unsafe {
         dummy_spanned(ast::Ident::with_empty_ctxt(
-            token::intern(&format!("'__hoare_{}", RUN_COUNT)),
+            Symbol::intern(&format!("'__hoare_{}", RUN_COUNT)),
         ))
     }
 }
