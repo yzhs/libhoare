@@ -298,12 +298,7 @@ where
 
 // Takes the predicate passed to the syntax extension, checks it and turns it
 // into a string.
-fn make_predicate(
-    cx: &ExtCtxt,
-    sp: Span,
-    attr: &MetaItem,
-    cond_name: &str,
-) -> Result<InternedString, ()> {
+fn make_predicate(cx: &ExtCtxt, sp: Span, attr: &MetaItem, cond_name: &str) -> Result<Symbol, ()> {
     fn debug_name(cond_name: &str) -> String {
         let mut result = "debug_".to_string();
         result.push_str(cond_name);
