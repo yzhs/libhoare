@@ -311,8 +311,10 @@ fn make_predicate(
     }
 
     match &attr.node {
-        &ast::MetaItemKind::NameValue(ref name, ref lit) => {
-            if name.to_string() == cond_name || name.to_string() == &debug_name(cond_name)[..] {
+        &ast::MetaItemKind::NameValue(ref lit) => {
+            if attr.name.to_string() == cond_name ||
+                attr.name.to_string() == &debug_name(cond_name)[..]
+            {
                 match &lit.node {
                     &ast::LitKind::Str(ref lit, _) => Ok(lit.clone()),
                     _ => {
@@ -321,7 +323,10 @@ fn make_predicate(
                     }
                 }
             } else {
-                cx.span_err(sp, &format!("unexpected name in condition: {}", name)[..]);
+                cx.span_err(
+                    sp,
+                    &format!("unexpected name in condition: {}", attr.name)[..],
+                );
                 Err(())
             }
         }
