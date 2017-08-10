@@ -409,7 +409,7 @@ fn make_body(cx: &ExtCtxt, mut body: ast::Block, sp: Span, ret: &ast::FunctionRe
     // be better not to generate this code then.
     body.stmts.push(cx.stmt_expr(cx.expr(
         codemap::DUMMY_SP,
-        ast::ExprKind::Break(Some(spanned_loop_label())),
+        ast::ExprKind::Break(Some(spanned_loop_label()), None),
     )));
 
     cx.stmt_expr(cx.expr(
@@ -486,7 +486,7 @@ impl<'a, 'b> Folder for ReturnFolder<'a, 'b> {
                     quote_stmt!(self.cx, $result_name = Some($expr);).unwrap(),
                     self.cx.stmt_expr(self.cx.expr(
                         codemap::DUMMY_SP,
-                        ast::ExprKind::Break(Some(loop_label)),
+                        ast::ExprKind::Break(Some(loop_label), None),
                     )),
                 ];
                 let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts));
@@ -499,7 +499,7 @@ impl<'a, 'b> Folder for ReturnFolder<'a, 'b> {
                     quote_stmt!(self.cx, $result_name = Some(());).unwrap(),
                     self.cx.stmt_expr(self.cx.expr(
                         codemap::DUMMY_SP,
-                        ast::ExprKind::Break(Some(loop_label)),
+                        ast::ExprKind::Break(Some(loop_label), None),
                     )),
                 ];
                 let expr = self.cx.expr_block(self.cx.block(stmts[0].span, stmts));
