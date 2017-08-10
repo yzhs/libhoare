@@ -19,9 +19,9 @@ which was named after Tony).
 
 ## Using libhoare
 
-You can use libhoare with Cargo by adding 
+You can use libhoare with Cargo by adding
 
-```
+``` toml
 [dependencies.hoare]
 git = "https://github.com/nick29581/libhoare.git"
 ```
@@ -36,7 +36,7 @@ building).
 Then (whether or not you used Cargo), in your crate you will need the following
 boilerplate:
 
-```
+``` rust
 #![feature(plugin, custom_attribute)]
 
 #![plugin(hoare)]
@@ -47,14 +47,13 @@ Then you can use the macros as shown below.
 
 ## Examples:
 
-```
+``` rust
 #[precond="x > 0"]
 #[postcond="result > 1"]
 fn foo(x: int) -> int {
     let y = 45 / x;
     y + 1
 }
-
 
 struct Bar {
     f1: int,
@@ -113,7 +112,7 @@ cargo build
 
 (if using cargo) or
 
-```
+``` bash
 $RUSTC ./libhoare/lib.rs
 ```
 
@@ -124,7 +123,7 @@ To build the examples run `eg.sh` in the top level and to run the tests run `tes
 Both of these assume that you have a sibling directory called `obj` and that you
 used
 
-```
+``` bash
 $RUSTC ./libhoare/lib.rs -o "../obj/libhoare.so"
 ```
 
