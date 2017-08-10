@@ -61,7 +61,7 @@ struct Lexer {
     end: usize,
 }
 
-#[postcond="return.start == return.end"]
+#[postcond = "return.start == return.end"]
 fn new_lexer(input: &'static str) -> Lexer {
     Lexer {
         input: input,
@@ -71,7 +71,7 @@ fn new_lexer(input: &'static str) -> Lexer {
 }
 
 // Returns the next token or None if EOF.
-#[invariant="this.start == this.end"]
+#[invariant = "this.start == this.end"]
 fn next(this: &mut Lexer) -> Option<&'static str> {
     assert!(this.start == this.end);
 
@@ -87,13 +87,13 @@ fn next(this: &mut Lexer) -> Option<&'static str> {
 }
 
 // Returns the current token.
-#[precond="this.end > this.start"]
+#[precond = "this.end > this.start"]
 fn cur_token(this: &Lexer) -> &'static str {
     &this.input[this.start..this.end]
 }
 
 // Advance start to next non-whitespace char, or EOF.
-#[postcond="this.start == this.end"]
+#[postcond = "this.start == this.end"]
 fn scan_to_token(this: &mut Lexer) {
     while this.start < this.input.len() && is_space(this, this.start) {
         this.start += 1;
@@ -102,8 +102,10 @@ fn scan_to_token(this: &mut Lexer) {
 }
 
 // Advance this.end to the end of the current token or EOF
-#[precond="this.start < this.input.len() && !is_space(this, this.start) && this.start == this.end"]
-#[postcond="this.end - this.start > 0 && !is_space(this, this.end-1)"]
+#[precond = "this.start < this.input.len()
+    && !is_space(this, this.start)
+    && this.start == this.end"]
+#[postcond = "this.end - this.start > 0 && !is_space(this, this.end-1)"]
 fn scan_token(this: &mut Lexer) {
     // The set of possible terminals we could be lexing.
     let mut terminals: HashSet<usize> = HashSet::new();
@@ -117,8 +119,12 @@ fn scan_token(this: &mut Lexer) {
         terminals.extend(INDEXES.iter().map(|i| *i));
         // See if the first char matches any terminal. Means we'll match the
         // first char twice, but no biggie.
-        terminals = terminals.into_iter().filter(
-            |t| this.input.as_bytes()[this.start] == TS[*t].as_bytes()[0]).collect();
+        terminals = terminals
+            .into_iter()
+            .filter(|t| {
+                this.input.as_bytes()[this.start] == TS[*t].as_bytes()[0]
+            })
+            .collect();
         this.end += 1;
         (false, terminals.len() > 0)
     };
@@ -146,17 +152,23 @@ fn scan_token(this: &mut Lexer) {
             assert!(terminals.len() > 0);
             // winner is true if there is exactly one possibile terminal which
             // could be selected.
-            let winner = if terminals.iter().filter(
-                |t| TS[**t].len() == this.end - this.start).count() == 1 {
+            let winner = if terminals
+                .iter()
+                .filter(|t| TS[**t].len() == this.end - this.start)
+                .count() == 1
+            {
                 true
             } else {
                 false
             };
-            terminals = terminals.into_iter().filter(|t| {
-                let offset = this.end - this.start;
-                offset < TS[*t].len()
-                    && this.input.as_bytes()[this.end] == TS[*t].as_bytes()[offset]
-            }).collect();
+            terminals = terminals
+                .into_iter()
+                .filter(|t| {
+                    let offset = this.end - this.start;
+                    offset < TS[*t].len() &&
+                        this.input.as_bytes()[this.end] == TS[*t].as_bytes()[offset]
+                })
+                .collect();
             if terminals.len() == 0 {
                 // Got to the end of the only possibility.
                 assert!(winner, "WHOOPS! Went from >1 to 0 possibilities to lex");
@@ -176,13 +188,13 @@ fn scan_token(this: &mut Lexer) {
 }
 
 // true if self.start points to whitespace (space or newline)
-#[precond="index < this.input.as_bytes().len()"]
+#[precond = "index < this.input.as_bytes().len()"]
 fn is_space(this: &Lexer, index: usize) -> bool {
     this.input.as_bytes()[index] == ' ' as u8 || this.input.as_bytes()[index] == '\n' as u8
 }
 
 // true if self.start points to '
-#[precond="index < this.input.as_bytes().len()"]
+#[precond = "index < this.input.as_bytes().len()"]
 fn is_quote(this: &Lexer, index: usize) -> bool {
     this.input.as_bytes()[index] == QUOTE as u8
 }

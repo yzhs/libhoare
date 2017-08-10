@@ -32,7 +32,7 @@ struct Foo {
 }
 
 impl Foo {
-    #[precond="self.x < 10"]
+    #[precond = "self.x < 10"]
     fn foo(&self, y: char) {
         //let z: &Self = self;
 

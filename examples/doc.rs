@@ -14,8 +14,8 @@
 
 // Examples from readme.md
 
-#[precond="x > 0"]
-#[postcond="return > 1"]
+#[precond = "x > 0"]
+#[postcond = "return > 1"]
 fn foo(x: i64) -> i64 {
     let y = 45 / x;
     y + 1
@@ -24,10 +24,10 @@ fn foo(x: i64) -> i64 {
 
 struct Bar {
     f1: i64,
-    f2: i64
+    f2: i64,
 }
 
-#[invariant="x.f1 < x.f2"]
+#[invariant = "x.f1 < x.f2"]
 fn baz(x: &mut Bar) {
     x.f1 += 10;
     x.f2 += 10;
